@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "recursive-functions", "recursive-functions\recursive-functions.csproj", "{A03C3BFD-6A73-4072-B46B-8D428E3411CD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A03C3BFD-6A73-4072-B46B-8D428E3411CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A03C3BFD-6A73-4072-B46B-8D428E3411CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A03C3BFD-6A73-4072-B46B-8D428E3411CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A03C3BFD-6A73-4072-B46B-8D428E3411CD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9F62676B-A5CB-453F-9049-2C0D1CEE0282}
+	EndGlobalSection
+EndGlobal
