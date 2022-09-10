@@ -171,7 +171,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="assistance_functions.h" />
-    <ClInclude Include="models.h" />
     <ClInclude Include="structures.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
