@@ -6,7 +6,7 @@
 namespace recursive_systems
 {
 	inline void set_state(
-		std::vector<aurora::state_gradient_pair>& a_destination,
+		std::vector<aurora::latent::state_gradient_pair>& a_destination,
 		const std::vector<bool>& a_source
 	)
 	{
