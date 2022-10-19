@@ -12,7 +12,7 @@ void test_train_future_state_predictor(
 	using namespace recursive_systems;
 
 	size_t l_system_size = 20;
-	size_t l_future_size = 100000;
+	size_t l_future_size = 1000;
 
 	recursive_system l_recursive_system = recursive_system::random(l_system_size);
 
