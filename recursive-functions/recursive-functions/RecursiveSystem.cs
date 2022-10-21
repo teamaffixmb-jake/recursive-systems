@@ -6,185 +6,108 @@ using System.Threading.Tasks;
 
 namespace recursive_functions
 {
-    public class BinaryOperator
+    public class BinaryInputWithPossibleInversion
     {
-        public virtual bool Evaluate(bool[] state)
+        public int index;
+        public bool performInversion;
+        public BinaryInputWithPossibleInversion(int index, bool performInversion)
         {
+            this.index = index;
+            this.performInversion = performInversion;
+        }
+        public bool Evaluate(bool[] state)
+        {
+            // Perform XOR between the inversion signal and the input substate.
+            return performInversion != state[index];
+        }
+    }
+    public class Minterm : List<BinaryInputWithPossibleInversion>
+    {
+        public Minterm(int systemSize, int mintermIndex)
+        {
+            for (int i = 0; i < systemSize; i++)
+            {
+                // Perform a bit shift before AND-ing the result with mintermIndex, so as to reveal
+                // whether or not an inversion should occur on the given binary input.
+                bool performInversion = (mintermIndex & ((int)Math.Pow(2, systemSize - 1) >> i)) == 0;
+                // Construct binaryinput
+                Add(new BinaryInputWithPossibleInversion(i, performInversion));
+            }
+        }
+        public bool Evaluate(bool[] state)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                if (!this[i].Evaluate(state))
+                    // If EVER the evaluation of a binary input is false, we can return false, seeing as 
+                    // a minterm is made up of repeated ANDs of the (inverted)/(not inverted) binary inputs.
+                    return false;
+            }
+            return true;
+        }
+    }
+    public class BinaryOperator : List<Minterm>
+    {
+        public BinaryOperator(int systemSize, bool[] mintermSum)
+        {
+            for (int i = 0; i < mintermSum.Length; i++)
+            {
+                if (mintermSum[i])
+                    // Only add the minterms we need to for computation.
+                    Add(new Minterm(systemSize, i));
+            }
+        }
+        public bool Evaluate(bool[] state)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                if (this[i].Evaluate(state))
+                    // Return true if ONE minterm evaluates to true because we are OR-ing all of the minterms
+                    return true;
+            }
             return false;
-        }
-        public static BinaryOperator Parse(string unparsed)
-        {
-            // Remove all spaces from the unparsed string.
-            unparsed = unparsed.Trim(' ');
-
-            // Very first thing, is try and see if the unparsed thing
-            // is just an index operator.
-            if (uint.TryParse(unparsed, out uint systemIndex))
-            {
-                return new SubstateIndex(systemIndex);
-            }
-
-            Exception instructionMalformedException = new Exception("Error, malformed binary operator instruction: " + unparsed);
-            
-            const int BEGIN_OPERATOR_INDICATOR_LENGTH = 2;
-            const int   END_OPERATOR_INDICATOR_LENGTH = 1;
-
-            if (unparsed.Length < BEGIN_OPERATOR_INDICATOR_LENGTH + END_OPERATOR_INDICATOR_LENGTH + 1)
-                throw instructionMalformedException;
-
-            const string          NOT_INDICATOR = "!(";
-            const string          AND_INDICATOR = "&(";
-            const string           OR_INDICATOR = "|(";
-            const string END_OPERATOR_INDICATOR = ")";
-            
-            // Get the indicator for which operator should be used.
-            string operatorIndicator = unparsed.Substring(0, BEGIN_OPERATOR_INDICATOR_LENGTH);
-            string finalCharacter = unparsed.Substring(unparsed.Length - END_OPERATOR_INDICATOR_LENGTH, END_OPERATOR_INDICATOR_LENGTH);
-            
-            // Get the arguments (contents of the operator).
-            string arguments = unparsed.Substring(BEGIN_OPERATOR_INDICATOR_LENGTH, unparsed.Length - BEGIN_OPERATOR_INDICATOR_LENGTH - END_OPERATOR_INDICATOR_LENGTH);
-
-            int argumentsCommaIndex = -1;
-            int argumentsParenthesisRank = 0;
-
-            for (int i = 0; i < arguments.Length; i++)
-            {
-                if (arguments[i] == '(') argumentsParenthesisRank++;
-                else if (arguments[i] == ')') argumentsParenthesisRank--;
-                else if (argumentsParenthesisRank == 0 && arguments[i] == ',') { argumentsCommaIndex = i; break; }
-            }
-
-            string argument0 = "";
-            string argument1 = "";
-
-            if (argumentsCommaIndex >= 0)
-            {
-                argument0 = arguments.Substring(0, argumentsCommaIndex);
-                argument1 = arguments.Substring(argumentsCommaIndex + 1, arguments.Length - argument0.Length - 1);
-            }
-
-            if (finalCharacter != END_OPERATOR_INDICATOR)
-                throw instructionMalformedException;
-
-            switch(operatorIndicator)
-            {
-                case NOT_INDICATOR:
-                    {
-                        return new Not(Parse(arguments));
-                    }
-                case AND_INDICATOR:
-                    {
-                        return new And(Parse(argument0), Parse(argument1));
-                    }
-                case OR_INDICATOR:
-                    {
-                        return new Or(Parse(argument0), Parse(argument1));
-                    }
-                default:
-                    {
-                        // An error occured. An unrecognized operator indicator was provided.
-                        throw instructionMalformedException;
-                    }
-            }
-
-        }
-    }
-    public class SubstateIndex : BinaryOperator
-    {
-        uint Index = 0;
-        public SubstateIndex(uint index)
-        {
-            Index = index;
-        }
-        public override bool Evaluate(bool[] state)
-        {
-            return state[(int)Index];
-        }
-        public override string ToString()
-        {
-            return Index.ToString();
-        }
-    }
-    public class Not : BinaryOperator
-    {
-        BinaryOperator InternalOperand;
-        public Not(BinaryOperator internalOperand)
-        {
-            InternalOperand = internalOperand;
-        }
-        public override bool Evaluate(bool[] state)
-        {
-            return !InternalOperand.Evaluate(state);
-        }
-        public override string ToString()
-        {
-            return "!(" + InternalOperand.ToString() + ")";
-        }
-    }
-    public class And : BinaryOperator
-    {
-        BinaryOperator InternalOperand0;
-        BinaryOperator InternalOperand1;
-        public And(BinaryOperator internalOperand0, BinaryOperator internalOperand1)
-        {
-            InternalOperand0 = internalOperand0;
-            InternalOperand1 = internalOperand1;
-        }
-        public override bool Evaluate(bool[] state)
-        {
-            return InternalOperand0.Evaluate(state) && InternalOperand1.Evaluate(state);
-        }
-        public override string ToString()
-        {
-            return "&(" + InternalOperand0.ToString() + "," + InternalOperand1.ToString() + ")";
-        }
-    }
-    public class Or : BinaryOperator
-    {
-        BinaryOperator InternalOperand0;
-        BinaryOperator InternalOperand1;
-        public Or(BinaryOperator internalOperand0, BinaryOperator internalOperand1)
-        {
-            InternalOperand0 = internalOperand0;
-            InternalOperand1 = internalOperand1;
-        }
-        public override bool Evaluate(bool[] state)
-        {
-            return InternalOperand0.Evaluate(state) || InternalOperand1.Evaluate(state);
-        }
-        public override string ToString()
-        {
-            return "|(" + InternalOperand0.ToString() + "," + InternalOperand1.ToString() + ")";
         }
     }
     public class RecursiveSystem : List<BinaryOperator>
     {
-        public RecursiveSystem(BinaryOperator[] unparsed) :
-            base(unparsed)
+        public RecursiveSystem(string? filePath)
         {
+            // Do some sanity check on the file path.
+            if (string.IsNullOrEmpty(filePath))
+            {
+                Console.WriteLine("Empty system path string. Failure.");
+                return;
+            }
+
+            // Import all lines from the file at once.
+            string[] lines = File.ReadAllLines(filePath);
+
+            // For every line in the file, construct a binary operator based off of the
+            // minterm sum represented in that line.
+            foreach (string line in lines)
+            {
+                // Make sure that the binary representation of the minterm sum makes sense
+                // based off of the known size of the system
+                if (Math.Log2(line.Length) != lines.Length)
+                    throw new Exception("Error: incorrect minterm sum binary string length.");
+                Add(new BinaryOperator(lines.Length, BoolArrayFromBinaryString(line)));
+            }
 
         }
         public bool[] Evaluate(bool[] state)
         {
+            if (state.Length != Count)
+                throw new Exception("State size was invalid given the system size. State size: " + state.Length + ", system size: " + Count);
             bool[] result = new bool[state.Length];
             for (int i = 0; i < state.Length; i++)
                 result[i] = this[i].Evaluate(state);
             return result;
         }
-        public bool[] Evaluate(bool[] state, int iterations)
+        private static bool[] BoolArrayFromBinaryString(string state)
         {
-            bool[] result = state;
-            for (int i = 0; i < iterations; i++)
-                result = Evaluate(result);
-            return result;
-        }
-        public override string ToString()
-        {
-            string result = "";
-            
-            foreach (BinaryOperator binaryOperator in this)
-                result += binaryOperator.ToString() + " ";
-            
+            bool[] result = new bool[state.Length];
+            for (int i = 0; i < result.Length; i++)
+                result[i] = state[i] == '1';
             return result;
         }
     }
