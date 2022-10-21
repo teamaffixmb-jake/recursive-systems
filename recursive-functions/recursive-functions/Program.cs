@@ -6,17 +6,18 @@
 /// <substate> <equation>
 /// </summary>
 
-RecursiveSystem recursiveSystem = new RecursiveSystem("../../../../../future-mapping/system-0.txt");
+bool[] initialState = { true, false, false, false, true, false, false, false, false, false };
 
-bool[] state = { true, false, false, false, true };
+Random random = new Random();
+
+//RecursiveSystem recursiveSystem = new RecursiveSystem("../../../../../future-mapping/system-0.txt", initialState);
+RecursiveSystem recursiveSystem = RecursiveSystem.Random(random, initialState);
 
 for (int i = 0; true; i++)
 {
-    state = recursiveSystem.Evaluate(state);
-    Console.WriteLine(i.ToString());
+    bool[] state = recursiveSystem.Next();
+    Console.WriteLine(i.ToString() + ": " + StateToString(state));
 }
-
-Console.Read();
 
 //Console.WriteLine("Loaded system, initial state pair: " + recursiveSystem.ToString());
 

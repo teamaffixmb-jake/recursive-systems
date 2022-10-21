@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace recursive_functions
 {
+    /// <summary>
+    /// An input that gets taken from a previously inputted system state, which may or may not be inverted.
+    /// </summary>
     public class BinaryInputWithPossibleInversion
     {
         public int index;
@@ -21,6 +24,9 @@ namespace recursive_functions
             return performInversion != state[index];
         }
     }
+    /// <summary>
+    /// A list of (possibly) inverted binary inputs, which when put through a product, will result in a minterm.
+    /// </summary>
     public class Minterm : List<BinaryInputWithPossibleInversion>
     {
         public Minterm(int systemSize, int mintermIndex)
@@ -46,8 +52,22 @@ namespace recursive_functions
             return true;
         }
     }
+    /// <summary>
+    /// A list of minterms which are included in a minterm sum, so as to produce a binary operator.
+    /// </summary>
     public class BinaryOperator : List<Minterm>
     {
+        public static BinaryOperator Random(Random random, int systemSize)
+        {
+            int mintermSumSize = (int)Math.Pow(2, systemSize);
+            BinaryOperator result = new BinaryOperator();
+            for (int i = 0; i < mintermSumSize; i++)
+            {
+                if (random.Next(2) == 1)
+                    result.Add(new Minterm(systemSize, i));
+            }
+            return result;
+        }
         public BinaryOperator(int systemSize, bool[] mintermSum)
         {
             for (int i = 0; i < mintermSum.Length; i++)
@@ -56,6 +76,10 @@ namespace recursive_functions
                     // Only add the minterms we need to for computation.
                     Add(new Minterm(systemSize, i));
             }
+        }
+        public BinaryOperator()
+        {
+
         }
         public bool Evaluate(bool[] state)
         {
@@ -68,9 +92,22 @@ namespace recursive_functions
             return false;
         }
     }
+    /// <summary>
+    /// A class which holds multiple binary operators. Each operator acts on inputs from the previous timestep 
+    /// to evaluate the current timestep.
+    /// </summary>
     public class RecursiveSystem : List<BinaryOperator>
     {
-        public RecursiveSystem(string? filePath)
+        private bool[]? state;
+        public static RecursiveSystem Random(Random random, bool[] initialState)
+        {
+            List<BinaryOperator> binaryOperators = new List<BinaryOperator>();
+            for (int i = 0; i < initialState.Length; i++)
+                binaryOperators.Add(BinaryOperator.Random(random, initialState.Length));
+            return new RecursiveSystem(binaryOperators, initialState);
+
+        }
+        public RecursiveSystem(string? filePath, bool[] initialState)
         {
             // Do some sanity check on the file path.
             if (string.IsNullOrEmpty(filePath))
@@ -93,15 +130,47 @@ namespace recursive_functions
                 Add(new BinaryOperator(lines.Length, BoolArrayFromBinaryString(line)));
             }
 
+            // Ensure that the size of the state is valid.
+            if (initialState.Length != lines.Length)
+                throw new Exception("Error: state length is invalid. State length: " + initialState.Length + ", system size: " + lines.Length);
+
+            // Save the initial state.
+            this.state = initialState;
+
         }
-        public bool[] Evaluate(bool[] state)
+        /// <summary>
+        /// Constructor which takes the list of binary operators as well as the initial state of the system.
+        /// </summary>
+        /// <param name="binaryOperators"></param>
+        /// <param name="initialState"></param>
+        public RecursiveSystem(List<BinaryOperator> binaryOperators, bool[] initialState) :
+            base(binaryOperators)
         {
-            if (state.Length != Count)
-                throw new Exception("State size was invalid given the system size. State size: " + state.Length + ", system size: " + Count);
+            this.state = initialState;
+        }
+        /// <summary>
+        /// Evaluates the previous state of the system to produce the current state.
+        /// </summary>
+        /// <param name="state"></param>
+        /// <returns></returns>
+        /// <exception cref="Exception"></exception>
+        public bool[] Next()
+        {
+            // Assert the fact that the member variable: state cannot be null.
+            if (state == null)
+                throw new Exception("Error: this.state was null.");
+            
             bool[] result = new bool[state.Length];
+            
+            // Loop through all binary operators, evaluating them on the previous state.
             for (int i = 0; i < state.Length; i++)
                 result[i] = this[i].Evaluate(state);
+
+            // Save the current state for the next time calling Next().
+            state = result;
+            
             return result;
+
         }
         private static bool[] BoolArrayFromBinaryString(string state)
         {
