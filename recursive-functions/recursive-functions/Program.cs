@@ -6,17 +6,20 @@
 /// <substate> <equation>
 /// </summary>
 
-bool[] initialState = { true, false, false, false, true, false, false, false, false, false };
+bool[] initialState = { true, false, false };
 
 Random random = new Random();
 
 //RecursiveSystem recursiveSystem = new RecursiveSystem("../../../../../future-mapping/system-0.txt", initialState);
 RecursiveSystem recursiveSystem = RecursiveSystem.Random(random, initialState);
 
-for (int i = 0; true; i++)
+int duration = (int)Math.Pow(2, initialState.Length);
+int durationDigits = duration.ToString().Length;
+
+for (int i = 0; i < duration; i++)
 {
     bool[] state = recursiveSystem.Next();
-    Console.WriteLine(i.ToString() + ": " + StateToString(state));
+    Console.WriteLine(i.ToString("D" + durationDigits.ToString()) + ": " + StateToString(state));
 }
 
 //Console.WriteLine("Loaded system, initial state pair: " + recursiveSystem.ToString());
@@ -50,6 +53,6 @@ string StateToString(bool[] state)
 {
     string result = "";
     foreach (bool value in state)
-        result += value ? "1 " : "0 ";
+        result += value ? "1" : "0";
     return result;
 }
