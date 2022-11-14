@@ -20,10 +20,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="structures.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="assistance_functions.h">
+    <ClInclude Include="recursive_systems.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
