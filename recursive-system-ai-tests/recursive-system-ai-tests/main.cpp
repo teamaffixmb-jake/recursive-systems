@@ -156,7 +156,7 @@ void generate_training_data(
 	const size_t FUTURE_DURATION_TIL_PREDICT = 1000;
 
 
-	const std::string l_folder_path = std::to_string(l_system_size) + "_system/";
+	const std::string l_folder_path = "training_data/" + std::to_string(l_system_size) + "_system/";
 	
 	if (std::filesystem::exists(l_folder_path) && !std::filesystem::is_directory(l_folder_path))
 		throw std::exception("Folder name was a file.");
