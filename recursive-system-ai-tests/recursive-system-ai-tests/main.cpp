@@ -41,6 +41,25 @@ inline std::vector<bool> flatten(
 	return l_result;
 }
 
+inline bool increment_binary_vector(
+	std::vector<bool>& a_vector
+)
+{
+	for (int i = a_vector.size() - 1; i >= 0; i--)
+	{
+		if (a_vector[i] == 0)
+		{
+			a_vector[i] = 1;
+			return true;
+		}
+		else
+		{
+			a_vector[i] = 0;
+		}
+	}
+	return false;
+}
+
 inline std::vector<bool> random_binary_vector(
 	const size_t& a_size
 )
@@ -140,21 +159,13 @@ public:
 		affix_base::data::byte_buffer& a_byte_buffer
 	) const
 	{
-		if (!a_byte_buffer.push_back(m_x))
-			return false;
-		if (!a_byte_buffer.push_back(m_y))
-			return false;
-		return true;
+		return a_byte_buffer.push_back(m_x, m_y);
 	}
 	bool deserialize(
 		affix_base::data::byte_buffer& a_byte_buffer
 	)
 	{
-		if (!a_byte_buffer.pop_front(m_x))
-			return false;
-		if (!a_byte_buffer.pop_front(m_y))
-			return false;
-		return true;
+		return a_byte_buffer.pop_front(m_x, m_y);
 	}
 };
 
@@ -180,58 +191,45 @@ void generate_training_data(
 	for (int i = path_count_in_directory(l_folder_path); i < 10000; i++)
 	{
 		std::string l_file_path = l_folder_path + std::to_string(i) + "_" + std::to_string(rand()) + ".bin";
-		{
-			auto l_initial_state = random_binary_vector(l_system_size);
 
-			auto l_unmodulated_matrix = random_minterm_matrix(l_system_size);
-			auto l_unmodulated_system = recursive_systems::recursive_system(
-				l_unmodulated_matrix,
-				l_initial_state
-			);
+		auto l_initial_state = random_binary_vector(l_system_size);
 
-
-			auto l_modulated_matrix = random_minterm_matrix(l_system_size);
-
-			auto l_modulated_system = recursive_systems::recursive_system(
-				l_modulated_matrix,
-				l_initial_state
-			);
+		auto l_unmodulated_matrix = random_minterm_matrix(l_system_size);
+		auto l_unmodulated_system = recursive_systems::recursive_system(
+			l_unmodulated_matrix,
+			l_initial_state
+		);
 
 
-			auto l_unmodulated_state = l_unmodulated_system.next(FUTURE_DURATION_TIL_PREDICT);
-			auto l_modulated_state = l_modulated_system.next(FUTURE_DURATION_TIL_PREDICT);
+		auto l_modulated_matrix = random_minterm_matrix(l_system_size);
+
+		auto l_modulated_system = recursive_systems::recursive_system(
+			l_modulated_matrix,
+			l_initial_state
+		);
 
 
-			auto l_flattened_matrix_xor = bitwise_xor(flatten(l_unmodulated_matrix), flatten(l_modulated_matrix));
-			auto l_state_xor = bitwise_xor(l_unmodulated_state, l_modulated_state);
+		auto l_unmodulated_state = l_unmodulated_system.next(FUTURE_DURATION_TIL_PREDICT);
+		auto l_modulated_state = l_modulated_system.next(FUTURE_DURATION_TIL_PREDICT);
 
-			training_set l_training_set(
+
+		auto l_flattened_matrix_xor = bitwise_xor(flatten(l_unmodulated_matrix), flatten(l_modulated_matrix));
+		auto l_state_xor = bitwise_xor(l_unmodulated_state, l_modulated_state);
+
+		training_set l_training_set(
+			aurora::oneshot::concat(
 				aurora::oneshot::concat(
-					aurora::oneshot::concat(
-						convert(l_initial_state),
-						aurora::oneshot::flatten(convert(l_unmodulated_matrix))
-					),
-					convert(l_flattened_matrix_xor)
+					convert(l_initial_state),
+					aurora::oneshot::flatten(convert(l_unmodulated_matrix))
 				),
-				convert(l_state_xor)
-			);
+				convert(l_flattened_matrix_xor)
+			),
+			convert(l_state_xor)
+		);
 
 
-			if (affix_base::files::file_write(l_file_path, l_training_set))
-				std::cout << "SUCCESSFULLY WROTE TRAINING SET TO FILE: " << l_file_path << std::endl;
-
-		}
-
-		{
-			training_set l_recovered_training_set;
-			Sleep(1000);
-			
-			// I think file_read is fucked up and should be rewritten (affix_base)
-
-			if (affix_base::files::file_read(l_file_path, l_recovered_training_set))
-				std::cout << "SUCCESSFULLY RECOVERED TRAINING SET FROM FILE: " << l_file_path << std::endl;
-
-		}
+		if (affix_base::files::file_write(l_file_path, l_training_set))
+			std::cout << "SUCCESSFULLY WROTE TRAINING SET TO FILE: " << l_file_path << std::endl;
 
 	}
 
@@ -243,7 +241,7 @@ void generate_training_data(
 
 
 
-const std::vector<size_t> NEURAL_NET_DIMENSIONS = { 40, 20, 10 };
+const std::vector<size_t> NEURAL_NET_DIMENSIONS = { 40, 20, 5 };
 
 inline std::vector<double> predict_future_state_change(
 	aurora::oneshot::parameter_vector& a_parameter_vector,
@@ -294,7 +292,7 @@ inline bool random_training_set(
 )
 {
 	size_t l_random_training_set_index = rand() % a_training_set_file_paths.size();
-	if (!affix_base::files::file_read(a_training_set_file_paths[l_random_training_set_index].generic_u8string(), a_result))
+	if (!affix_base::files::file_read(a_training_set_file_paths[l_random_training_set_index].generic_string(), a_result))
 		return false;
 	return true;
 }
@@ -357,14 +355,25 @@ void train_AI_predict_future_state_change(
 
 	particle_swarm_optimizer l_optimizer(l_particle_optimizers, 0.9, 0.2, 0.8);
 
+	if (affix_base::files::file_write(a_training_session_file_path.generic_string(), l_optimizer))
+		std::cout << "Saved training session to file." << std::endl;
 
+	affix_base::data::byte_buffer l_bb;
+
+	if (!l_bb.push_back(l_optimizer)) throw std::runtime_error("Oopsie");
+
+	std::vector<uint8_t> l_bb2;
 
 	// Restore the training session.
 	if (std::filesystem::exists(a_training_session_file_path))
-		if (!affix_base::files::file_read(a_training_session_file_path.generic_u8string(), l_optimizer))
+		if (!affix_base::files::file_read(a_training_session_file_path.generic_string(), l_bb2))
 			throw std::exception("Error: failed to read training session from file.");
 
-
+	for (int i = 0; i < l_bb.size(); i++)
+	{
+		if (l_bb.data()[i] != l_bb2[i])
+			throw std::runtime_error("Inequal at index: " + i);
+	}
 
 	std::vector<double> l_particle_rewards(PARTICLE_COUNT);
 
@@ -401,12 +410,116 @@ void train_AI_predict_future_state_change(
 			// Clear the particle's reward to avoid over-accumulation.
 			l_particle_rewards[i] = 0;
 
+		std::cout << l_optimizer.global_best_reward() << std::endl;
+
 		if (l_epoch % SAVE_TRAINING_SESSION_INTERVAL == 0)
+		{
 			// Save the training session at a set interval.
-			affix_base::files::file_write(a_training_session_file_path.generic_u8string(), l_optimizer);
+			if (affix_base::files::file_write(a_training_session_file_path.generic_string(), l_optimizer))
+				std::cout << "Saved training session to file." << std::endl;
+		}
 		
 	}
 
+
+}
+
+struct delta_r_example
+{
+public:
+	std::vector<std::vector<bool>> m_initial_minterm_matrix;
+	std::vector<std::vector<bool>> m_final_minterm_matrix;
+	std::vector<std::vector<bool>> m_change_in_minterm_matrix;
+	std::vector<std::vector<std::vector<bool>>> m_change_in_higher_degree_minterm_matrices;
+
+public:
+	bool serialize(
+		affix_base::data::byte_buffer& a_byte_buffer
+	) const
+	{
+		return a_byte_buffer.push_back(
+			m_initial_minterm_matrix,
+			m_final_minterm_matrix,
+			m_change_in_minterm_matrix,
+			m_change_in_higher_degree_minterm_matrices
+		);
+	}
+
+	bool deserialize(
+		affix_base::data::byte_buffer& a_byte_buffer
+	)
+	{
+		std::vector<bool> l_r;
+		return a_byte_buffer.pop_front(
+			l_r
+		);
+	}
+
+};
+
+void study_delta_r(
+
+)
+{
+	size_t l_examples = 100;
+
+	for (int l_example_index = 0; l_example_index < l_examples; l_example_index++)
+	{
+		delta_r_example l_example;
+
+	#pragma region Generate Random Matrices
+
+
+		size_t l_system_size = 3;
+		l_example.m_initial_minterm_matrix = random_minterm_matrix(l_system_size);
+		l_example.m_final_minterm_matrix = random_minterm_matrix(l_system_size);
+		l_example.m_change_in_minterm_matrix.resize(l_system_size);
+		for (int i = 0; i < l_system_size; i++)
+		{
+			for (int j = 0; j < l_example.m_initial_minterm_matrix[i].size(); j++)
+			{
+				l_example.m_change_in_minterm_matrix[i].push_back(l_example.m_final_minterm_matrix[i][j] != 
+					l_example.m_initial_minterm_matrix[i][j]);
+			}
+		}
+
+
+	#pragma endregion
+	
+	#pragma region Check Change At Focus
+
+
+		std::vector<bool> l_initial_state(l_system_size);
+
+		for (int l_timestep_of_focus = 2; l_timestep_of_focus < 10; l_timestep_of_focus++)
+		{
+			std::vector<std::vector<bool>> l_change_at_focus_matrix(l_system_size);
+
+			while (true)
+			{
+				recursive_systems::recursive_system l_initial_rs(l_example.m_initial_minterm_matrix, l_initial_state);
+				recursive_systems::recursive_system l_final_rs(l_example.m_final_minterm_matrix, l_initial_state);
+		
+				std::vector<bool> l_initial_state_at_focus = l_initial_rs.next(l_timestep_of_focus);
+				std::vector<bool> l_final_state_at_focus = l_final_rs.next(l_timestep_of_focus);
+
+				for (int i = 0; i < l_initial_state_at_focus.size(); i++)
+				{
+					l_change_at_focus_matrix[i].push_back(l_final_state_at_focus[i] != l_initial_state_at_focus[i]);
+				}
+
+				if (!increment_binary_vector(l_initial_state))
+					break;
+			}
+
+			l_example.m_change_in_higher_degree_minterm_matrices.push_back(l_change_at_focus_matrix);
+
+		}
+
+
+	#pragma endregion
+
+	}
 
 }
 
@@ -414,9 +527,10 @@ int main(
 
 )
 {
-	generate_training_data();
-	/*train_AI_predict_future_state_change(
+	//generate_training_data();
+	train_AI_predict_future_state_change(
 		"training_data/5_system/",
 		"training_sessions/5_system_attempt_0.bin"
-	);*/
+	);
+	//study_delta_r();
 }
