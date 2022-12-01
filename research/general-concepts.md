@@ -76,4 +76,12 @@ This seems to require the construction of the entire graph (adjacency matrix). T
 
 Each evaluation of the system can be done in parallel, meaning that the overall process of evaluating future states may be able to be done faster than pure simulation, for some systems. However, for large systems (1000+ substates), this quickly becomes intractible Furthermore, this can be shown to be useless since in effect, the goal of a useful recursive system is to yield useful results (futures states). If we are (in parallel) computing all states that exist within the range of the system, then why could we not simultaneously at evaluation time check the quality of the output state and then on synchronization, compare the qualities to select the best state for operation? This would be even faster than compiling them into a matrix to then perform matrix multiplication with.
 
+## Future Mapping
 
+Future mapping means being able to go from a seed for which the future is known, and a different seed, and being able predict states in the future of the different seed given only information about the initial seed, initial future, and final seed, thereby avoiding much unnecessary compute which would have to be done to get from the final seed to the final future states through simulation.
+
+Both systems involved in the seeds can be described by minterm matrices, and the initial states can be described using binary vectors.
+
+The change in system minterm matrix can be derived by the element-wise XOR of the initial and final minterm matrices.
+
+If you hold the initial states constant and only change the system, one could derive a minterm matrix describing the way that a select future state at a timestep of focus changes depending on initial state to the system.
